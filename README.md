@@ -169,7 +169,7 @@ cp /root/client1.ovpn /home/user/
 ```bash
 chown user:user /home/user/client1.ovpn
 ```
-### E. Skopiuj plik z klienta
+### E. Skopiuj plik z serwera na klienta
 ```bash
 scp user@IP_SERWERA:/home/user/client1.ovpn ~/
 ```
