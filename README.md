@@ -152,13 +152,22 @@ apt install openssh-server -y
 systemctl enable ssh
 systemctl start ssh
 ```
-
-### B. Skopiuj plik z klienta
-
+### B. Stwórz użytkownika user
 ```bash
-scp root@IP_SERWERA:/root/client1.ovpn ~/
+adduser user
 ```
-
+### C. Skopiuj plik z roota do pliku domowego user
+```bash
+cp /root/client1.ovpn /home/user/
+```
+### D. Zmień właściciela na user
+```bash
+chown user:user /home/user/client1.ovpn
+```
+### E. Skopiuj plik z klienta
+```bash
+scp user@IP_SERWERA:/home/user/client1.ovpn ~/
+```
 ---
 
 ##  10. Uruchomienie OpenVPN na kliencie
