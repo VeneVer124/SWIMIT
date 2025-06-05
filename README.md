@@ -24,16 +24,28 @@ apt install openvpn easy-rsa -y
 
 ```bash
 make-cadir ~/openvpn-ca
-cd ~/openvpn-ca
-./easyrsa init-pki
-./easyrsa build-ca nopass
-./easyrsa gen-req serwer nopass
-./easyrsa sign-req server serwer
-./easyrsa gen-dh
-openvpn --genkey --secret ta.key
-
 ```
-
+```bash
+cd ~/openvpn-ca
+```
+```bash
+./easyrsa init-pki
+```
+```bash
+./easyrsa build-ca nopass
+```
+```bash
+./easyrsa gen-req serwer nopass
+```
+```bash
+./easyrsa sign-req server serwer
+```
+```bash
+./easyrsa gen-dh
+```
+```bash
+openvpn --genkey --secret ta.key
+```
 ---
 
 ##  3. Kopiowanie plików do OpenVPN
