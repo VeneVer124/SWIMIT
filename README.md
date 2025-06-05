@@ -1,19 +1,17 @@
 # 📡 OpenVPN – Konfiguracja Serwera i Klienta (Debian)
 
-Minimalny, ale kompletny tutorial instalacji i konfiguracji OpenVPN na systemie Debian (serwer + klient) z użyciem Easy-RSA.
-
+Przewodnik po instalacji OpenVPN
 ---
 
-## ✅ Założenia
+## Założenia
 
-- Serwer: Debian (np. `192.168.0.107`)
+- Serwer: Debian
 - Klient: inna maszyna w tej samej sieci
-- Uprawnienia: `root` lub `sudo`
-- Pakiety: `openvpn`, `easy-rsa`, `openssh-server` (na serwerze)
+- Pakiety: `openvpn`, `easy-rsa`
 
 ---
 
-## 🧱 1. Instalacja (na serwerze)
+##  1. Instalacja (na serwerze)
 
 ```bash
 apt update
@@ -22,113 +20,118 @@ apt install openvpn easy-rsa -y
 
 ---
 
-## 📂 2. Inicjalizacja Easy-RSA
+##  2. Inicjalizacja Easy-RSA
 
 ```bash
-mkdir ~/openvpn-ca && cd ~/openvpn-ca
-ln -s /usr/share/easy-rsa/* .
+make-cadir ~/openvpn-ca
+cd ~/openvpn-ca
 ./easyrsa init-pki
-./easyrsa build-ca
-./easyrsa gen-req server nopass
-./easyrsa sign-req server server
+./easyrsa build-ca nopass
+./easyrsa gen-req serwer nopass
+./easyrsa sign-req server serwer
 ./easyrsa gen-dh
 openvpn --genkey --secret ta.key
+
 ```
 
 ---
 
-## 📁 3. Kopiowanie plików do OpenVPN
+##  3. Kopiowanie plików do OpenVPN
 
 ```bash
-cp pki/ca.crt pki/issued/server.crt pki/private/server.key pki/dh.pem ta.key /etc/openvpn/
+sudo cp pki/ca.crt pki/private/serwer.key pki/issued/serwer.crt pki/dh.pem ta.key /etc/openvpn/
 ```
 
 ---
 
-## ⚙️ 4. Konfiguracja serwera `/etc/openvpn/server.conf`
+##  4. Utworzenie pliku konfiguracyjnego serwera
 
-```ini
-port 1194
-proto udp
-dev tun
-ca ca.crt
-cert server.crt
-key server.key
-dh dh.pem
-auth SHA256
-tls-auth ta.key 0
-server 10.8.0.0 255.255.255.0
+```bash
+sudo nano /etc/openvpn/server.conf
+```
+
+---
+
+
+##  5. Konfiguracja serwera `/etc/openvpn/server.conf`
+
+```bash
+port 1194                  # Port, na którym działa VPN
+proto udp                  # Protokół (UDP = szybszy)
+dev tun                    # Użycie interfejsu tunelowego (tun = IP-level VPN)
+ca ca.crt                  # Certyfikat CA
+cert serwer.crt            # Certyfikat serwera
+key serwer.key             # Klucz prywatny serwera
+dh dh.pem                  # Parametry DH
+auth SHA256                # Algorytm HMAC
+tls-auth ta.key 0          # Klucz TLS-Auth i jego rola (0 = serwer)
+server 10.8.0.0 255.255.255.0  # Zakres IP dla klientów VPN
+keepalive 10 120           # Utrzymywanie połączenia
 persist-key
 persist-tun
-keepalive 10 120
 status openvpn-status.log
-verb 3
+verb 3                     # Poziom logowania (więcej = bardziej szczegółowo)
+
 ```
 
 ---
 
-## 🚀 5. Uruchomienie serwera
+##  6. Uruchomienie serwera
 
 ```bash
 systemctl start openvpn@server
 systemctl enable openvpn@server
 systemctl status openvpn@server
 ```
-
 ---
 
-## 👤 6. Tworzenie klienta
+##  7. Tworzenie klienta
 
 ```bash
 cd ~/openvpn-ca
-./easyrsa gen-req client1 nopass
-./easyrsa sign-req client client1
+./easyrsa build-client-full client1 nopass
 ```
-
-```bash
-cp pki/issued/client1.crt pki/private/client1.key /etc/openvpn/
-```
-
 ---
 
-## 🧾 7. Tworzenie pliku konfiguracyjnego `client1.ovpn`
+##  8. Tworzenie pliku konfiguracyjnego `client1.ovpn`
 
 Zapisz jako `/root/client1.ovpn`:
 
-```ini
+```bash
+cd ~/openvpn-ca
+# Przykładowa komenda do wygenerowania klienta OVPN (z certyfikatem, kluczem i ta.key)
+cat > ~/client1.ovpn <<EOF
 client
 dev tun
 proto udp
-remote 192.168.0.107 1194
+remote IP_SERWERA 1194
 resolv-retry infinite
 nobind
 persist-key
 persist-tun
 remote-cert-tls server
+cipher AES-256-CBC
 auth SHA256
-tls-auth ta.key 1
-verb 3
-
+key-direction 1
 <ca>
-(wklej zawartość ca.crt)
+$(cat pki/ca.crt)
 </ca>
-
 <cert>
-(wklej zawartość client1.crt)
+$(cat pki/issued/client1.crt)
 </cert>
-
 <key>
-(wklej zawartość client1.key)
+$(cat pki/private/client1.key)
 </key>
-
 <tls-auth>
-(wklej zawartość ta.key)
+$(cat ta.key)
 </tls-auth>
+EOF
+
 ```
 
 ---
 
-## 🔄 8. Kopiowanie `client1.ovpn` na klienta
+##  9. Kopiowanie `client1.ovpn` na klienta
 
 ### A. Włącz SSH na serwerze
 
@@ -141,12 +144,12 @@ systemctl start ssh
 ### B. Skopiuj plik z klienta
 
 ```bash
-scp root@192.168.0.107:/root/client1.ovpn ~/
+scp root@IP_SERWERA:/root/client1.ovpn ~/
 ```
 
 ---
 
-## 🧪 9. Uruchomienie OpenVPN na kliencie
+##  10. Uruchomienie OpenVPN na kliencie
 
 ```bash
 apt install openvpn -y
@@ -155,7 +158,7 @@ sudo openvpn --config ~/client1.ovpn
 
 ---
 
-## ✅ Gotowe!
+##  Gotowe!
 
 Po połączeniu klienta z serwerem, możesz sprawdzić interfejs `tun0`:
 
@@ -164,16 +167,3 @@ ip a
 ```
 
 ---
-
-## 🛡️ Uwagi bezpieczeństwa
-
-- Produkcyjnie warto zabezpieczyć klucze hasłem (`build-req`)
-- Użyj `tls-crypt` zamiast `tls-auth` (szyfruje + uwierzytelnia)
-- Dodaj NAT i routowanie, jeśli chcesz dostęp do sieci
-
----
-
-## 📚 Źródła
-
-- [OpenVPN Documentation](https://openvpn.net/community-resources/)
-- [Easy-RSA GitHub](https://github.com/OpenVPN/easy-rsa)
