@@ -1,25 +1,28 @@
-# OpenVPN – Minimalny Konfig CLI (Debian)
+# 📡 OpenVPN – Konfiguracja Serwera i Klienta (Debian)
 
-Szybka i **minimalna konfiguracja serwera i klienta OpenVPN** na systemie Debian/Linux – z użyciem `easy-rsa` i bez zbędnych dodatków. Całość do zrobienia w ok. **10–15 minut**.
-
-## ✅ Założenia
-
-- Serwer i klient to dwa różne systemy Debian/Ubuntu
-- Użytkownik ma dostęp root (`sudo`)
-- Adres IP serwera: `192.168.0.107` (przykład)
+Minimalny, ale kompletny tutorial instalacji i konfiguracji OpenVPN na systemie Debian (serwer + klient) z użyciem Easy-RSA.
 
 ---
 
-## 🖥️ 1. Instalacja pakietów (na serwerze)
+## ✅ Założenia
+
+- Serwer: Debian (np. `192.168.0.107`)
+- Klient: inna maszyna w tej samej sieci
+- Uprawnienia: `root` lub `sudo`
+- Pakiety: `openvpn`, `easy-rsa`, `openssh-server` (na serwerze)
+
+---
+
+## 🧱 1. Instalacja (na serwerze)
 
 ```bash
-sudo apt update
-sudo apt install openvpn easy-rsa -y
+apt update
+apt install openvpn easy-rsa -y
 ```
 
 ---
 
-## 🔐 2. Tworzenie CA i kluczy (serwer)
+## 📂 2. Inicjalizacja Easy-RSA
 
 ```bash
 mkdir ~/openvpn-ca && cd ~/openvpn-ca
@@ -34,17 +37,15 @@ openvpn --genkey --secret ta.key
 
 ---
 
-## 📁 3. Kopiowanie plików do /etc/openvpn
+## 📁 3. Kopiowanie plików do OpenVPN
 
 ```bash
-cp pki/ca.crt pki/private/server.key pki/issued/server.crt pki/dh.pem ta.key /etc/openvpn/
+cp pki/ca.crt pki/issued/server.crt pki/private/server.key pki/dh.pem ta.key /etc/openvpn/
 ```
 
 ---
 
-## ⚙️ 4. Tworzenie pliku konfiguracyjnego serwera
-
-Zapisz jako `/etc/openvpn/server.conf`:
+## ⚙️ 4. Konfiguracja serwera `/etc/openvpn/server.conf`
 
 ```ini
 port 1194
@@ -69,9 +70,9 @@ verb 3
 ## 🚀 5. Uruchomienie serwera
 
 ```bash
-sudo systemctl start openvpn@server
-sudo systemctl enable openvpn@server
-sudo systemctl status openvpn@server
+systemctl start openvpn@server
+systemctl enable openvpn@server
+systemctl status openvpn@server
 ```
 
 ---
@@ -79,11 +80,10 @@ sudo systemctl status openvpn@server
 ## 👤 6. Tworzenie klienta
 
 ```bash
+cd ~/openvpn-ca
 ./easyrsa gen-req client1 nopass
 ./easyrsa sign-req client client1
 ```
-
-Kopiuj pliki:
 
 ```bash
 cp pki/issued/client1.crt pki/private/client1.key /etc/openvpn/
@@ -91,9 +91,9 @@ cp pki/issued/client1.crt pki/private/client1.key /etc/openvpn/
 
 ---
 
-## 📦 7. Tworzenie pliku `client1.ovpn`
+## 🧾 7. Tworzenie pliku konfiguracyjnego `client1.ovpn`
 
-Zapisz w `/root/client1.ovpn`:
+Zapisz jako `/root/client1.ovpn`:
 
 ```ini
 client
@@ -110,35 +110,35 @@ tls-auth ta.key 1
 verb 3
 
 <ca>
-(PASTE zawartość ca.crt)
+(wklej zawartość ca.crt)
 </ca>
 
 <cert>
-(PASTE zawartość client1.crt)
+(wklej zawartość client1.crt)
 </cert>
 
 <key>
-(PASTE zawartość client1.key)
+(wklej zawartość client1.key)
 </key>
 
 <tls-auth>
-(PASTE zawartość ta.key)
+(wklej zawartość ta.key)
 </tls-auth>
 ```
 
 ---
 
-## 🔄 8. Przeniesienie pliku `client1.ovpn` na klienta
+## 🔄 8. Kopiowanie `client1.ovpn` na klienta
 
-Na serwerze uruchom SSH:
+### A. Włącz SSH na serwerze
 
 ```bash
-sudo apt install openssh-server -y
-sudo systemctl enable ssh
-sudo systemctl start ssh
+apt install openssh-server -y
+systemctl enable ssh
+systemctl start ssh
 ```
 
-Na kliencie skopiuj plik:
+### B. Skopiuj plik z klienta
 
 ```bash
 scp root@192.168.0.107:/root/client1.ovpn ~/
@@ -146,16 +146,18 @@ scp root@192.168.0.107:/root/client1.ovpn ~/
 
 ---
 
-## 🧪 9. Połączenie z klienta
-
-Na kliencie:
+## 🧪 9. Uruchomienie OpenVPN na kliencie
 
 ```bash
-sudo apt install openvpn -y
+apt install openvpn -y
 sudo openvpn --config ~/client1.ovpn
 ```
 
-Po połączeniu możesz sprawdzić interfejs tun:
+---
+
+## ✅ Gotowe!
+
+Po połączeniu klienta z serwerem, możesz sprawdzić interfejs `tun0`:
 
 ```bash
 ip a
@@ -163,15 +165,15 @@ ip a
 
 ---
 
-## 🎉 Gotowe!
+## 🛡️ Uwagi bezpieczeństwa
 
-Masz działający tunel VPN między serwerem a klientem.
+- Produkcyjnie warto zabezpieczyć klucze hasłem (`build-req`)
+- Użyj `tls-crypt` zamiast `tls-auth` (szyfruje + uwierzytelnia)
+- Dodaj NAT i routowanie, jeśli chcesz dostęp do sieci
 
 ---
 
-## 📌 Uwagi
+## 📚 Źródła
 
-- Można dodać reguły NAT i routingu jeśli potrzebujesz pełnego dostępu do sieci
-- Można skorzystać z `ufw` lub `iptables` w razie potrzeby
-- Dla bezpieczeństwa użyj haseł (passphrase) lub `tls-crypt` zamiast `tls-auth`
-
+- [OpenVPN Documentation](https://openvpn.net/community-resources/)
+- [Easy-RSA GitHub](https://github.com/OpenVPN/easy-rsa)
