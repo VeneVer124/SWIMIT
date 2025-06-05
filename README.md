@@ -44,7 +44,7 @@ cd ~/openvpn-ca
 ./easyrsa gen-dh
 ```
 ```bash
-openvpn --genkey --secret ta.key
+sudo /usr/sbin/openvpn --genkey --secret ta.key
 ```
 ---
 
