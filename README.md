@@ -184,7 +184,16 @@ sudo openvpn --config ~/client1.ovpn
 Po połączeniu klienta z serwerem, możesz sprawdzić interfejs `tun0`:
 
 ```bash
-ip a
+ip addr show tun0
 ```
+Sprawdzić czy możesz pingować VPN serwera
+```bash
+ping 10.8.0.1
+```
+Oraz sprawdzić trasę do serwera
+```bash
+ip route
+```
+
 
 ---
