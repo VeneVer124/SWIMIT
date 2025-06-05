@@ -46,6 +46,11 @@ cd ~/openvpn-ca
 ```bash
 sudo /usr/sbin/openvpn --genkey --secret ta.key
 ```
+EWENTUALNIE JEŚLI NIE DZIAŁA NADAL TO:
+
+```bash
+export PATH=$PATH:/usr/sbin
+```
 ---
 
 ##  3. Kopiowanie plików do OpenVPN
